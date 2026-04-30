@@ -236,12 +236,14 @@ export default function App() {
     setProducts(updated);
   };
 
-  // Vibrant colour mapping based on days until expiry
+  /**
+   * Returns a highly vibrant background colour based on days until expiry.
+   * Colours are pure, saturated hues that pop against the background.
+   */
   const getColor = (days) => {
-    // More vibrant colours: bright red, gold, and bright green
-    if (days <= 1) return "#ff4444"; // vivid red
-    if (days <= 3) return "#ffd700"; // vibrant gold
-    return "#33cc33";                // lively green
+    if (days <= 1) return "#ff3b30"; // vibrant red (almost pure red)
+    if (days <= 3) return "#ffcc00"; // sunny, pure gold
+    return "#34c759";               // juicy, fresh green
   };
 
   // =======================
@@ -295,8 +297,8 @@ export default function App() {
         backgroundImage: "url('https://images.unsplash.com/photo-1542838132-92c53300491e')",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        // Reduce background vibrancy so the colourful product tiles pop
-        filter: "saturate(0.2) brightness(0.8)"
+        // Slightly toned down background so the vibrant tiles can shine, but still colourful
+        filter: "brightness(0.9) saturate(0.8)"
       }}
     >
       {/* ---- HEADER WITH SETTINGS COG & LOGOUT ---- */}
@@ -453,8 +455,8 @@ export default function App() {
       <div
         style={{
           display: "grid",
-          // Responsive grid: tiles automatically adjust to fill the row
-          // Minimum tile width is 200px, they expand to fill available space
+          // Responsive grid: tiles automatically adjust to fill the row,
+          // minimum width 200px, expand to fill available space
           gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
           gap: 8
         }}
@@ -465,7 +467,7 @@ export default function App() {
             <div
               key={i}
               style={{
-                background: getColor(days),
+                background: getColor(days),   // vivid indicator colour
                 padding: 6,
                 borderRadius: 6,
                 position: "relative",
