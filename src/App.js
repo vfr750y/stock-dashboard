@@ -627,6 +627,17 @@ export default function App() {
       if (isNaN(d.getTime())) return;
     }
 
+    // Special handling for stock updates via number input
+    if (field === "stock") {
+      const oldStock = Number(updated[i].stock) || 0;
+      const newStock = Number(value);
+      
+      if (newStock < oldStock) {
+        const decrease = oldStock - newStock;
+        updated[i].sold = (Number(updated[i].sold) || 0) + decrease;
+      }
+    }
+
     updated[i][field] = value;
     setProducts(updated);
   };
