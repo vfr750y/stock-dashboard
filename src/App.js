@@ -66,7 +66,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : [{ username: "jared", password: "fruitandveg" }];
   });
 
-  // Discount settings (percentages as decimals)
+  // Discount settings
   const [discounts, setDiscounts] = useState(() => {
     const saved = localStorage.getItem("discountSettings");
     return saved ? JSON.parse(saved) : { discount5: 0.05, discount3: 0.10, discount2: 0.20 };
@@ -91,6 +91,9 @@ export default function App() {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [settingsMsg, setSettingsMsg] = useState("");
 
+  // Sorting state – 'default' (unsorted), 'alpha' (A-Z), 'expiry' (closest expiry first)
+  const [sortBy, setSortBy] = useState("default");
+
   // Persistence
   useEffect(() => {
     localStorage.setItem("products", JSON.stringify(products));
@@ -103,6 +106,20 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("discountSettings", JSON.stringify(discounts));
   }, [discounts]);
+
+  // -----------------------------------------------
+  //  DYNAMIC LOADING OF OLD ENGLISH FONT
+  // -----------------------------------------------
+  useEffect(() => {
+    // Only add the Google Font link once
+    if (!document.getElementById("playfair-font-link")) {
+      const link = document.createElement("link");
+      link.id = "playfair-font-link";
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap";
+      document.head.appendChild(link);
+    }
+  }, []);
 
   // -----------------------
   //  LOGIN HANDLER
@@ -238,12 +255,46 @@ export default function App() {
 
   /**
    * Returns a highly vibrant background colour based on days until expiry.
-   * Colours are pure, saturated hues that pop against the background.
    */
   const getColor = (days) => {
-    if (days <= 1) return "#ff3b30"; // vibrant red (almost pure red)
-    if (days <= 3) return "#ffcc00"; // sunny, pure gold
-    return "#34c759";               // juicy, fresh green
+    if (days <= 1) return "#ff3b30"; // vibrant red
+    if (days <= 3) return "#ffcc00"; // sunny gold
+    return "#34c759";               // fresh green
+  };
+
+  // --------------------------------------------------
+  //  SORTING LOGIC
+  // --------------------------------------------------
+  /**
+   * Creates a sorted version of the products array along with original indices.
+   * Sorting keeps the original index for all editing operations.
+   */
+  const sortedProducts = (() => {
+    const withIndex = products.map((p, idx) => ({ ...p, _originalIndex: idx }));
+
+    if (sortBy === "alpha") {
+      return withIndex.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "expiry") {
+      return withIndex.sort((a, b) => {
+        const daysA = getDaysLeft(a.expiry) || Infinity;
+        const daysB = getDaysLeft(b.expiry) || Infinity;
+        return daysA - daysB;
+      });
+    } else {
+      // default – keep insertion order
+      return withIndex;
+    }
+  })();
+
+  // -----------------------
+  //  COMMON TITLE STYLE
+  // -----------------------
+  const stockSageTitleStyle = {
+    fontFamily: "'Playfair Display', serif",
+    fontWeight: 700,
+    fontSize: "2em",
+    letterSpacing: "1px",
+    margin: 0
   };
 
   // =======================
@@ -272,7 +323,9 @@ export default function App() {
             textAlign: "center"
           }}
         >
-          <h2>Login</h2>
+          {/* Old-fashioned shop title on the login page */}
+          <h1 style={stockSageTitleStyle}>Stock Sage</h1>
+          <h2 style={{ marginTop: 10 }}>Login</h2>
           <div style={{ marginBottom: 10 }}>
             <input name="username" placeholder="Username" required style={{ padding: 8, width: "100%" }} />
           </div>
@@ -297,11 +350,10 @@ export default function App() {
         backgroundImage: "url('https://images.unsplash.com/photo-1542838132-92c53300491e')",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        // Slightly toned down background so the vibrant tiles can shine, but still colourful
         filter: "brightness(0.9) saturate(0.8)"
       }}
     >
-      {/* ---- HEADER WITH SETTINGS COG & LOGOUT ---- */}
+      {/* ---- HEADER WITH SORTING, SETTINGS & LOGOUT ---- */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 15 }}>
         <div
           style={{
@@ -312,12 +364,49 @@ export default function App() {
             backdropFilter: "blur(4px)"
           }}
         >
-          <h1 style={{ margin: 0 }}>Stock Sage</h1>
+          <h1 style={stockSageTitleStyle}>Stock Sage</h1>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {/* USER ICON */}
           <div style={{ background: "rgba(255,255,255,0.8)", padding: "6px 12px", borderRadius: 8 }}>
             👤 {currentUser}
           </div>
+
+          {/* SORTING BUTTON – ALPHABETICAL */}
+          <button
+            onClick={() => setSortBy("alpha")}
+            title="Sort alphabetically (A‑Z)"
+            style={{
+              background: sortBy === "alpha" ? "#e0e7ff" : "white",
+              border: "1px solid #aaa",
+              borderRadius: 8,
+              padding: "6px 10px",
+              cursor: "pointer",
+              fontSize: 16,
+              fontWeight: sortBy === "alpha" ? "bold" : "normal"
+            }}
+          >
+            A‑Z
+          </button>
+
+          {/* SORTING BUTTON – BY DAYS TO GO (CLOSEST FIRST) */}
+          <button
+            onClick={() => setSortBy("expiry")}
+            title="Sort by days to go (lowest first)"
+            style={{
+              background: sortBy === "expiry" ? "#e0e7ff" : "white",
+              border: "1px solid #aaa",
+              borderRadius: 8,
+              padding: "6px 10px",
+              cursor: "pointer",
+              fontSize: 16,
+              fontWeight: sortBy === "expiry" ? "bold" : "normal"
+            }}
+          >
+            ⏳
+          </button>
+
+          {/* SETTINGS COG */}
           <button
             onClick={() => setShowSettings(true)}
             title="Settings"
@@ -332,6 +421,8 @@ export default function App() {
           >
             ⚙️
           </button>
+
+          {/* LOGOUT */}
           <button
             onClick={handleLogout}
             style={{
@@ -455,19 +546,19 @@ export default function App() {
       <div
         style={{
           display: "grid",
-          // Responsive grid: tiles automatically adjust to fill the row,
-          // minimum width 200px, expand to fill available space
           gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
           gap: 8
         }}
       >
-        {products.map((p, i) => {
+        {sortedProducts.map((p) => {
+          // p._originalIndex is the real index in the original products array
+          const i = p._originalIndex;
           const days = getDaysLeft(p.expiry);
           return (
             <div
               key={i}
               style={{
-                background: getColor(days),   // vivid indicator colour
+                background: getColor(days),
                 padding: 6,
                 borderRadius: 6,
                 position: "relative",
@@ -544,29 +635,29 @@ export default function App() {
                   />
                 </div>
 
-                {/* ---- CURRENCY FORMAT for Sale Price ---- */}
+                {/* Sale Price */}
                 <div>Sale:</div>
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <span style={{ marginRight: 2 }}>$</span>
                   <input
-                  type="number"
-                  step="0.01"
-                  value={Number(p.salePrice).toFixed(2)}
-                  onChange={(e) => updateField(i, "salePrice", parseFloat(e.target.value) || 0)}
-                  style={{ width: "50%" }}
+                    type="number"
+                    step="0.01"
+                    value={Number(p.salePrice).toFixed(2)}
+                    onChange={(e) => updateField(i, "salePrice", parseFloat(e.target.value) || 0)}
+                    style={{ width: "50%" }}
                   />
                 </div>
 
-                {/* ---- CURRENCY FORMAT for Cost Price ---- */}
+                {/* Cost Price */}
                 <div>Cost:</div>
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <span style={{ marginRight: 2 }}>$</span>
                   <input
-                  type="number"
-                  step="0.01"
-                  value={Number(p.costPrice).toFixed(2)}
-                  onChange={(e) => updateField(i, "costPrice", parseFloat(e.target.value) || 0)}
-                  style={{ width: "50%" }}
+                    type="number"
+                    step="0.01"
+                    value={Number(p.costPrice).toFixed(2)}
+                    onChange={(e) => updateField(i, "costPrice", parseFloat(e.target.value) || 0)}
+                    style={{ width: "50%" }}
                   />
                 </div>
 
