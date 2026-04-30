@@ -236,10 +236,12 @@ export default function App() {
     setProducts(updated);
   };
 
+  // Vibrant colour mapping based on days until expiry
   const getColor = (days) => {
-    if (days <= 1) return "#ef4444";
-    if (days <= 3) return "#facc15";
-    return "#22c55e";
+    // More vibrant colours: bright red, gold, and bright green
+    if (days <= 1) return "#ff4444"; // vivid red
+    if (days <= 3) return "#ffd700"; // vibrant gold
+    return "#33cc33";                // lively green
   };
 
   // =======================
@@ -293,7 +295,8 @@ export default function App() {
         backgroundImage: "url('https://images.unsplash.com/photo-1542838132-92c53300491e')",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        filter: "saturate(0.6) brightness(0.85)"
+        // Reduce background vibrancy so the colourful product tiles pop
+        filter: "saturate(0.2) brightness(0.8)"
       }}
     >
       {/* ---- HEADER WITH SETTINGS COG & LOGOUT ---- */}
@@ -307,7 +310,7 @@ export default function App() {
             backdropFilter: "blur(4px)"
           }}
         >
-          <h1 style={{ margin: 0 }}>Jared's Stock Keeping Dashboard</h1>
+          <h1 style={{ margin: 0 }}>Stock Sage</h1>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <div style={{ background: "rgba(255,255,255,0.8)", padding: "6px 12px", borderRadius: 8 }}>
@@ -450,7 +453,9 @@ export default function App() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
+          // Responsive grid: tiles automatically adjust to fill the row
+          // Minimum tile width is 200px, they expand to fill available space
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
           gap: 8
         }}
       >
@@ -594,7 +599,8 @@ export default function App() {
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            borderRadius: 6
+            borderRadius: 6,
+            minHeight: 100
           }}
         >
           + Add New Product
