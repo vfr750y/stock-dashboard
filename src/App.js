@@ -475,6 +475,9 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
   const [loginError, setLoginError] = useState("");
+  
+  // New state for password visibility toggle
+  const [showPassword, setShowPassword] = useState(false);
 
   // Settings panel visibility
   const [showSettings, setShowSettings] = useState(false);
@@ -532,7 +535,7 @@ export default function App() {
   };
 
   // -----------------------
-  //  LOGIN HANDLER
+  //  LOGIN HANDLER (Case Insensitive)
   // -----------------------
   const handleLogin = (e) => {
     e.preventDefault();
@@ -540,7 +543,8 @@ export default function App() {
     const username = form.username.value.trim();
     const password = form.password.value;
 
-    const user = users.find(u => u.username === username && u.password === password);
+    // Convert username to lowercase for case-insensitive comparison
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
     if (user) {
       setIsLoggedIn(true);
       setCurrentUser(username);
@@ -597,7 +601,7 @@ export default function App() {
       setSettingsMsg("Username and password are required.");
       return;
     }
-    if (users.some(u => u.username === newUsername.trim())) {
+    if (users.some(u => u.username.toLowerCase() === newUsername.trim().toLowerCase())) {
       setSettingsMsg("Username already exists.");
       return;
     }
@@ -740,7 +744,29 @@ export default function App() {
             <input name="username" placeholder="Username" required style={{ padding: 8, width: "100%" }} />
           </div>
           <div style={{ marginBottom: 10 }}>
-            <input name="password" type="password" placeholder="Password" required style={{ padding: 8, width: "100%" }} />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input 
+                name="password" 
+                type={showPassword ? "text" : "password"} 
+                placeholder="Password" 
+                required 
+                style={{ padding: 8, flex: 1 }} 
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  background: "#f0f0f0",
+                  border: "1px solid #ccc",
+                  borderRadius: 4,
+                  fontSize: "12px"
+                }}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
           </div>
           {loginError && <div style={{ color: "red", marginBottom: 8 }}>{loginError}</div>}
           <button type="submit" style={{ padding: "8px 20px", cursor: "pointer" }}>Sign In</button>
@@ -899,239 +925,4 @@ export default function App() {
           >
             <h2 style={{ marginTop: 0 }}>Settings</h2>
 
-            {/* Discount percentages */}
-            <fieldset style={{ marginBottom: 15, padding: 10 }}>
-              <legend><strong>Price Reduction Percentages</strong></legend>
-              <div style={{ marginBottom: 8 }}>
-                <label>5‑3 days left (%): </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={newDiscount5}
-                  onChange={(e) => setNewDiscount5(e.target.value)}
-                  style={{ width: 60, marginLeft: 8 }}
-                />
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label>3‑2 days left (%): </label>
-                <input                  type="number"
-                  min="0"
-                  max="100"
-                  value={newDiscount3}
-                  onChange={(e) => setNewDiscount3(e.target.value)}
-                  style={{ width: 60, marginLeft: 8 }}
-                />
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label>2‑1 days left (%): </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={newDiscount2}
-                  onChange={(e) => setNewDiscount2(e.target.value)}
-                  style={{ width: 60, marginLeft: 8 }}
-                />
-              </div>
-              <button onClick={saveDiscounts} style={{ cursor: "pointer" }}>Save Discounts</button>
-            </fieldset>
-
-            {/* Change Password */}
-            <fieldset style={{ marginBottom: 15, padding: 10 }}>
-              <legend><strong>Change Password</strong></legend>
-              <div style={{ marginBottom: 8 }}>
-                <label>Current password: </label>
-                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label>New password: </label>
-                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label>Confirm new password: </label>
-                <input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
-              </div>
-              <button onClick={changePassword} style={{ cursor: "pointer" }}>Update Password</button>
-            </fieldset>
-
-            {/* Add User */}
-            <fieldset style={{ marginBottom: 15, padding: 10 }}>
-              <legend><strong>Add New User</strong></legend>
-              <div style={{ marginBottom: 8 }}>
-                <label>New username: </label>
-                <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label>Password: </label>
-                <input type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
-              </div>
-              <button onClick={addUser} style={{ cursor: "pointer" }}>Add User</button>
-            </fieldset>
-
-            {settingsMsg && <div style={{ color: "green", marginTop: 10 }}>{settingsMsg}</div>}
-            <button onClick={() => setShowSettings(false)} style={{ marginTop: 10, cursor: "pointer" }}>Close</button>
-          </div>
-        </div>
-      )}
-
-      {/* ---- PRODUCT GRID ---- */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-          gap: 8
-        }}
-      >
-        {sortedProducts.map((p) => {
-          // p._originalIndex is the real index in the original products array
-          const i = p._originalIndex;
-          const days = getDaysLeft(p.expiry);
-          return (
-            <div
-              key={i}
-              style={{
-                background: getColor(days),
-                padding: 6,
-                borderRadius: 6,
-                position: "relative",
-                fontSize: 12
-              }}
-            >
-              <button
-                onClick={() => removeProduct(i)}
-                style={{ position: "absolute", top: 2, right: 4 }}
-              >
-                x
-              </button>
-
-              <input
-                value={p.name}
-                onChange={(e) => updateField(i, "name", e.target.value)}
-              />
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 3,
-                  marginTop: 4
-                }}
-              >
-                <div>Stock:</div>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <input
-                      type="number"
-                      value={p.stock}
-                      onChange={(e) => updateField(i, "stock", e.target.value)}
-                      style={{ width: "50%" }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => updateField(i, "unit", "kg")}
-                      style={{
-                        fontWeight: p.unit === "kg" ? "bold" : "normal",
-                        background: p.unit === "kg" ? "#d1d5db" : "#f3f4f6",
-                        border: "1px solid #9ca3af",
-                        borderRadius: 4,
-                        padding: "1px 4px",
-                        cursor: "pointer",
-                        fontSize: 10
-                      }}
-                    >
-                      kg
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateField(i, "unit", "units")}
-                      style={{
-                        fontWeight: p.unit === "units" ? "bold" : "normal",
-                        background: p.unit === "units" ? "#d1d5db" : "#f3f4f6",
-                        border: "1px solid #9ca3af",
-                        borderRadius: 4,
-                        padding: "1px 4px",
-                        cursor: "pointer",
-                        fontSize: 10
-                      }}
-                    >
-                      units
-                    </button>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="200"
-                    value={p.stock}
-                    onChange={(e) => handleSliderChange(i, Number(e.target.value))}
-                    style={{ width: "100%", marginTop: 2 }}
-                  />
-                </div>
-
-                {/* Sale Price */}
-                <div>Sale:</div>
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <span style={{ marginRight: 2 }}>$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={Number(p.salePrice).toFixed(2)}
-                    onChange={(e) => updateField(i, "salePrice", parseFloat(e.target.value) || 0)}
-                    style={{ width: "50%" }}
-                  />
-                </div>
-
-                {/* Cost Price */}
-                <div>Cost:</div>
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <span style={{ marginRight: 2 }}>$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={Number(p.costPrice).toFixed(2)}
-                    onChange={(e) => updateField(i, "costPrice", parseFloat(e.target.value) || 0)}
-                    style={{ width: "50%" }}
-                  />
-                </div>
-
-                <div>Expiry:</div>
-                <input
-                  type="date"
-                  value={p.expiry}
-                  onChange={(e) => updateField(i, "expiry", e.target.value)}
-                />
-
-                <div>Days to go:</div>
-                <div style={{ fontSize: "1.3em", fontWeight: "bold" }}>
-                  {p.expiry ? `${getDaysLeft(p.expiry)}` : "-"}
-                </div>
-
-                <div>Suggested Next Price:</div>
-                <div>${suggestPrice(p, discounts)}</div>
-
-                <div>Profit:</div>
-                <div>${calculateProfit(p)}</div>
-              </div>
-            </div>
-          );
-        })}
-
-        <div
-          onClick={addProduct}
-          style={{
-            border: "2px dashed white",
-            color: "white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            borderRadius: 6,
-            minHeight: 100
-          }}
-        >
-          + Add New Product
-        </div>
-      </div>
-    </div>
-  );
-}
+            {/*
