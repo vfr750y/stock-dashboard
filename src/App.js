@@ -1029,7 +1029,7 @@ export default function App() {
                 padding: 6,
                 borderRadius: 6,
                 position: "relative",
-                fontSize: 12
+                fontSize: 14
               }}
             >
               <button
