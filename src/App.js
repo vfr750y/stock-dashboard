@@ -270,11 +270,7 @@ function getUserGuideHTML() {
         <p>Stock Sage is your friendly inventory management tool for fruit and vegetable shops. It helps you track stock levels, monitor expiry dates, and maximize profits by suggesting smart discounts on items that need to sell quickly.</p>
         
         <h3>Logging In</h3>
-        <p>When you first open the app, you'll see a login screen. Use your username and password to access your dashboard. The default login credentials are:</p>
-        <ul>
-          <li><strong>Username:</strong> jared</li>
-          <li><strong>Password:</strong> fruitandveg</li>
-        </ul>
+        <p>When you first open the app, you'll see a login screen. Use your username and password to access your dashboard.</p>
         <p>Once logged in, you'll see your personalized dashboard with all your products displayed in colorful cards.</p>
         
         <h3>Your Dashboard at a Glance</h3>
