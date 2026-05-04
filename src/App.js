@@ -1042,6 +1042,7 @@ export default function App() {
               <input
                 value={p.name}
                 onChange={(e) => updateField(i, "name", e.target.value)}
+                style={{ fontSize: "1.3em", fontWeight: "bold" }}
               />
 
               <div
