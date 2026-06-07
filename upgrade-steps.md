@@ -1,12 +1,15 @@
-To upgrade your proof-of-concept application into a fully production-ready system with a permanent cloud database and a secure, third-party identity provider, the most cost-effective path is migrating to a Backend-as-a-Service (BaaS) architecture.To minimize costs to absolute $0, the recommended solution is Supabase. It provides a fully managed PostgreSQL database and an integrated enterprise-grade Identity Provider (IdP) on a highly generous, permanent free tier.
+# Upgrade steps
+To upgrade from a proof-of-concept application into a fully production-ready system with a permanent cloud database and a secure, third-party identity provider, the most cost-effective path is migrating to a Backend-as-a-Service (BaaS) architecture.
+
+To minimize costs to absolute $0, the recommended solution is Supabase. It provides a fully managed PostgreSQL database and an integrated enterprise-grade Identity Provider (IdP) on a highly generous, permanent free tier.
 
 
 # 1. High-Level Target Architecture
 
-Instead of bundle-bloated frameworks or paying for isolated server hosting, keep your frontend deployed on Vercel ($0) and bridge your React state to Supabase via its lightweight client 
+Keep the frontend deployed on Vercel ($0) and bridge the React state to Supabase via its lightweight client SDK.
 
 ```
-SDK.+------------------------+      Secure API Requests     +------------------------+
++------------------------+      Secure API Requests     +------------------------+
 |   Vercel Hosting       | <--------------------------> |     Supabase (BaaS)    |
 | (React Frontend Client)|    (JSON Web Tokens / SSL)   | • PostgreSQL Database  |
 +------------------------+                              | • Managed Identity/IdP |
