@@ -1,7 +1,7 @@
 To upgrade your proof-of-concept application into a fully production-ready system with a permanent cloud database and a secure, third-party identity provider, the most cost-effective path is migrating to a Backend-as-a-Service (BaaS) architecture.To minimize costs to absolute $0, the recommended solution is Supabase. It provides a fully managed PostgreSQL database and an integrated enterprise-grade Identity Provider (IdP) on a highly generous, permanent free tier.
 
 
-1. High-Level Target Architecture
+# 1. High-Level Target Architecture
 
 Instead of bundle-bloated frameworks or paying for isolated server hosting, keep your frontend deployed on Vercel ($0) and bridge your React state to Supabase via its lightweight client 
 
@@ -14,7 +14,9 @@ SDK.+------------------------+      Secure API Requests     +-------------------
 ```
 
 
-2. Database Migration (PostgreSQL Schema)Because fresh produce data is highly structured, a relational SQL database is a much better fit than a NoSQL alternative (like Firebase Firestore), saving you from handling messy data-type conversions on the client side.You will drop localStorage and initialize a PostgreSQL table named products inside the Supabase console using this schema:
+# 2. Database Migration (PostgreSQL Schema)
+
+Because fresh produce data is highly structured, a relational SQL database is a much better fit than a NoSQL alternative (like Firebase Firestore), saving you from handling messy data-type conversions on the client side.You will drop localStorage and initialize a PostgreSQL table named products inside the Supabase console using this schema:
 
 ```sql
 SQLcreate table products (
@@ -33,7 +35,7 @@ SQLcreate table products (
 
 You can also create a separate key-value table called store_settings to house the discount percentages (discount5, discount3, discount2), ensuring configurations scale across multiple user instances.
 
-3. Migrating to Third-Party Identity Provider (IdP)
+# 3. Migrating to Third-Party Identity Provider (IdP)
 
 Your custom client-side credentials (jared / fruitandveg) will be replaced by Supabase Auth. This provides secure handling of password hashing, salt encryption, session tokens, and automatic management of user states.Steps to Setup:In the Supabase dashboard, navigate to Authentication -> Providers.Email/Password Provider: Turn it on. (Alternatively, you can activate Google OAuth for an integrated one-click sign-in).
 
@@ -64,7 +66,9 @@ async function handleLogin(email, password) {
 }
 ```
 
-4. Rewriting State Management & HelpersRather than listening to local mutation changes through a global useEffect mapped to localStorage, change your state architecture to read directly from the cloud on mount, and write changes via API transactions.Data Fetching (useEffect Update)
+# 4. Rewriting State Management & Helpers
+
+Rather than listening to local mutation changes through a global useEffect mapped to localStorage, change your state architecture to read directly from the cloud on mount, and write changes via API transactions.Data Fetching (useEffect Update)
 
 ```JavaScript
 useEffect(() => {
@@ -116,7 +120,7 @@ $$\text{Profit} = (\text{Sale Price} - \text{Cost Price}) \times \text{Units Sol
 
 The calculation continues to render cleanly in your dashboard interface since it derives values directly from the database table's synced state.
 
-5. Securing the Cloud Database with RLS
+# 5. Securing the Cloud Database with RLS
 
 Because the database is now public on the web, you must ensure that malicious third parties cannot intercept your API keys and modify your prices or inventory numbers. You achieve this for free by turning on Row Level Security (RLS) within your Postgres database console. Write a security policy that only permits data access if the client request contains a valid token matching your authenticated store employees:
 
