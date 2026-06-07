@@ -25,8 +25,8 @@ The application is deployed and publicly accessible at:
 To secure store operations, the dashboard is gated behind an authentication screen.
 
 ### Default Credentials:
-- **Username:** `jared`
-- **Password:** `fruitandveg`
+- **Username:**
+- **Password:**
 
 *Note: Username matching is entirely **case-insensitive** to limit friction during high-speed daily updates. Additional user roles can be introduced, and passwords can be rotated, via the built-in system settings modal (⚙️).*
 
