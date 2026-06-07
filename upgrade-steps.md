@@ -19,7 +19,8 @@ Keep the frontend deployed on Vercel ($0) and bridge the React state to Supabase
 
 # 2. Database Migration (PostgreSQL Schema)
 
-Because fresh produce data is highly structured, a relational SQL database is a much better fit than a NoSQL alternative (like Firebase Firestore), saving you from handling messy data-type conversions on the client side.You will drop localStorage and initialize a PostgreSQL table named products inside the Supabase console using this schema:
+A relational SQL database is a much better fit than a NoSQL alternative (like Firebase Firestore), 
+Drop localStorage and initialize a PostgreSQL table named products inside the Supabase console using this schema:
 
 ```sql
 SQLcreate table products (
@@ -36,7 +37,29 @@ SQLcreate table products (
 
 ```
 
-You can also create a separate key-value table called store_settings to house the discount percentages (discount5, discount3, discount2), ensuring configurations scale across multiple user instances.
+You can also create a separate key-value table called store_settings to house the discount percentages (discount5, discount3, discount2), ensuring configurations scale across multiple user instances:
+
+A traditional generic key-value store, where each distinct setting configuration lives on its own individual row. This makes it highly extensible if you decide to add more settings (like tax_rate or currency_symbol) in the future without altering the database schema.
+
+```SQL
+-- Create the true key-value settings table
+CREATE TABLE store_settings (
+    setting_key TEXT PRIMARY KEY,
+    setting_value NUMERIC(3, 2) NOT NULL
+);
+
+-- Seed the initial discount markdown percentages
+INSERT INTO store_settings (setting_key, setting_value) VALUES
+('discount5', 0.05),
+('discount3', 0.10),
+('discount2', 0.20)
+ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value;
+```
+
+How to query in React: 
+```
+SELECT setting_value FROM store_settings WHERE setting_key = 'discount5';
+```
 
 # 3. Migrating to Third-Party Identity Provider (IdP)
 
