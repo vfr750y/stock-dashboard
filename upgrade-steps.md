@@ -39,7 +39,7 @@ SQLcreate table products (
 
 Create a separate key-value table called store_settings to house the discount percentages, ensuring configurations scale across multiple user instances:
 
-A traditional generic key-value store, where each distinct setting configuration lives on its own individual row. This makes it highly extensible if you decide to add more settings (like tax_rate or currency_symbol) in the future without altering the database schema.
+A traditional generic key-value store, where each distinct setting configuration lives on its own individual row. This makes it highly extensible.
 
 ```SQL
 -- Create the true key-value settings table
