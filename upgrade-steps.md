@@ -63,7 +63,7 @@ SELECT setting_value FROM store_settings WHERE setting_key = 'discount5';
 
 # 3. Migrating to Third-Party Identity Provider (IdP)
 
-Your custom client-side credentials (jared / fruitandveg) will be replaced by Supabase Auth. This provides secure handling of password hashing, salt encryption, session tokens, and automatic management of user states.
+The custom client-side credentials will be replaced by Supabase Auth. This provides secure handling of password hashing, salt encryption, session tokens, and automatic management of user states.
 ## Steps to Setup:
 In the Supabase dashboard, navigate to Authentication -> Providers.Email/Password Provider: Turn it on. (Alternatively, you can activate Google OAuth for an integrated one-click sign-in).
 
