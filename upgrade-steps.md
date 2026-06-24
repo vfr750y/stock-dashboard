@@ -1,7 +1,7 @@
 # Upgrade steps
 To upgrade from a proof-of-concept application into a fully production-ready system with a permanent cloud database and a secure, third-party identity provider, the most cost-effective path is migrating to a Backend-as-a-Service (BaaS) architecture.
 
-To minimize costs to absolute $0, the recommended solution is Supabase. It provides a fully managed PostgreSQL database and an integrated enterprise-grade Identity Provider (IdP) on a highly generous, permanent free tier.
+To minimize costs the recommended solution is Supabase. It provides a fully managed PostgreSQL database and an integrated enterprise-grade Identity Provider (IdP) on a highly generous, permanent free tier.
 
 
 # 1. High-Level Target Architecture
