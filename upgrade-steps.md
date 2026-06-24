@@ -64,10 +64,11 @@ SELECT setting_value FROM store_settings WHERE setting_key = 'discount5';
 # 3. Migrating to Third-Party Identity Provider (IdP)
 
 The custom client-side credentials will be replaced by Supabase Auth. This provides secure handling of password hashing, salt encryption, session tokens, and automatic management of user states.
+
 ## Steps to Setup:
 In the Supabase dashboard, navigate to Authentication -> Providers.Email/Password Provider: Turn it on. (Alternatively, you can activate Google OAuth for an integrated one-click sign-in).
 
-Create account credentials for your store clerks directly via the dashboard, eliminating user registration screens from your public UI.
+Create account credentials directly via the dashboard..
 
 The React Code Shift:
 
