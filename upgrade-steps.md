@@ -20,7 +20,7 @@ The front-end is deployed on Vercel ($0) and bridge the React state to Supabase 
 # 2. Database Migration (PostgreSQL Schema)
 
 A relational SQL database is a much better fit than a NoSQL alternative (like Firebase Firestore), 
-Drop localStorage and initialize a PostgreSQL table named products inside the Supabase console using this schema:
+Remove the localstore from the react code and then initialize a PostgreSQL table named products inside the Supabase console using this schema:
 
 ```sql
 SQLcreate table products (
