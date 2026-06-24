@@ -6,7 +6,7 @@ To minimize costs the recommended solution is Supabase. It provides a fully mana
 
 # 1. High-Level Target Architecture
 
-Keep the frontend deployed on Vercel ($0) and bridge the React state to Supabase via its lightweight client SDK.
+The front-end is deployed on Vercel ($0) and bridge the React state to Supabase via its lightweight client SDK.
 
 ```
 +------------------------+      Secure API Requests     +------------------------+
