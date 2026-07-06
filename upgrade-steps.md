@@ -15,7 +15,7 @@ The front-end is deployed on Vercel ($0) and bridge the React state to Supabase 
 +------------------------+                              | • Managed Identity/IdP |
                                                         +------------------------+
 ```
-
+test
 
 # 2. Database Migration (PostgreSQL Schema)
 
