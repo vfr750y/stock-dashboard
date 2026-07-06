@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { defaultProducts } from "./data/defaultProducts";
-import { getDaysLeft, suggestPrice, calculateProfit } from "./utils/stockHelpers";
-import { getUserGuideHTML } from "./assets/userGuide";
+import { defaultProducts } from "./defaultProducts";
+import { getDaysLeft, suggestPrice, calculateProfit } from "./stockHelpers";
+import { getUserGuideHTML } from "./userGuide";
 
 export default function App() {
   // -----------------------
