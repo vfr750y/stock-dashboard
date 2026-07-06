@@ -1,39 +1,321 @@
-.App {
-  text-align: center;
+/* =========================================
+   App.css
+   ========================================= */
+
+/* Typography */
+.title {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 2em;
+  letter-spacing: 1px;
+  margin: 0;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
+/* Layout Containers */
+.loginContainer {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+  background-image: url('https://images.unsplash.com/photo-1542838132-92c53300491e');
+  background-size: cover;
+  background-position: center;
+}
+
+.appContainer {
+  padding: 20px;
+  min-height: 100vh;
+  background-image: url('https://images.unsplash.com/photo-1542838132-92c53300491e');
+  background-size: cover;
+  background-position: center;
+  /* Using background-color and blend mode is safer than filter, 
+     which darkens child elements. */
+  background-color: rgba(0, 0, 0, 0.4);
+  background-blend-mode: overlay;
+}
+
+/* Forms & Inputs */
+.loginForm {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  width: 100%;
+  max-width: 350px;
+}
+
+.inputGroup {
+  margin-bottom: 12px;
+}
+
+.inputGroup label {
+  display: block;
+  text-align: left;
+  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.formInput {
+  padding: 8px;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.passwordWrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.passwordWrapper input {
+  flex: 1;
+}
+
+/* Header & Navigation */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.headerLeft, .headerRight {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.titleBox {
+  background: rgba(255, 255, 255, 0.85);
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.1);
+  backdrop-filter: blur(4px);
+}
+
+.userBadge {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+/* Buttons */
+.btn {
+  border: 1px solid #aaa;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.btnPrimary {
+  background: #1a1a2e;
   color: white;
+  border: none;
+  padding: 10px 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-.App-link {
-  color: #61dafb;
+.btnPrimary:hover {
+  background: #2d2d44;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.btnSort {
+  font-size: 16px;
 }
 
+.btnSort.active {
+  background: #e0e7ff;
+  border-color: #4f46e5;
+  font-weight: bold;
+}
+
+.btnIcon {
+  font-size: 18px;
+  padding: 6px 10px;
+}
+
+.btnDanger {
+  background: transparent;
+  border: none;
+  font-weight: bold;
+  font-size: 14px;
+  color: rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+
+.btnDanger:hover {
+  color: #ff3b30;
+}
+
+.btnUnit {
+  border: 1px solid #9ca3af;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  background: #f3f4f6;
+}
+
+.btnUnit.active {
+  background: #d1d5db;
+  font-weight: bold;
+}
+
+/* Modals */
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modalContent {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+fieldset {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+fieldset legend {
+  font-weight: bold;
+  padding: 0 5px;
+  color: #374151;
+}
+
+.settingsMessage {
+  color: #10b981;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+.errorText {
+  color: #ef4444;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+/* Product Grid & Cards */
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.productCard {
+  padding: 10px;
+  border-radius: 8px;
+  position: relative;
+  font-size: 13px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+
+.productCard:hover {
+  transform: translateY(-2px);
+}
+
+/* Dynamic Card Colors */
+.cardGreen { background: #34c759; }
+.cardYellow { background: #ffcc00; }
+.cardRed { background: #ff3b30; }
+
+.deleteBtnWrapper {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+}
+
+.cardInput {
+  background: rgba(255,255,255,0.4);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 4px;
+  padding: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cardInput:focus {
+  background: white;
+  outline: none;
+  border-color: rgba(0,0,0,0.3);
+}
+
+.productTitleInput {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 8px;
+  background: transparent;
+  border-color: transparent;
+}
+
+.productTitleInput:focus {
+  background: white;
+}
+
+.cardDetailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 6px;
+  align-items: center;
+}
+
+.priceInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.daysToGo {
+  font-size: 1.4em;
+  font-weight: bold;
+}
+
+.addProductBtn {
+  border: 2px dashed rgba(255,255,255,0.6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 8px;
+  min-height: 120px;
+  font-weight: bold;
+  background: rgba(0,0,0,0.1);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.addProductBtn:hover {
+  background: rgba(0,0,0,0.2);
+  border-color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .header { flex-direction: column; align-items: stretch; }
+  .headerLeft, .headerRight { justify-content: space-between; }
+  .title { font-size: 1.5em; }
+}

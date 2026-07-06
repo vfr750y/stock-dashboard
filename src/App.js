@@ -1,7 +1,120 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
+import "./App.css"; // IMPORTANT: Import your new stylesheet here
 import { defaultProducts } from "./defaultProducts";
 import { getDaysLeft, suggestPrice, calculateProfit } from "./stockHelpers";
 import { getUserGuideHTML } from "./userGuide";
+
+// --------------------------------------------------
+//  HELPERS
+// --------------------------------------------------
+const getCardColorClass = (days) => {
+  if (days <= 1) return "cardRed";
+  if (days <= 3) return "cardYellow";
+  return "cardGreen";
+};
+
+// --------------------------------------------------
+//  MEMOIZED PRODUCT CARD COMPONENT
+// --------------------------------------------------
+const ProductCard = memo(({ p, originalIndex, updateField, removeProduct, handleSliderChange, discounts }) => {
+  const days = getDaysLeft(p.expiry);
+  const colorClass = getCardColorClass(days);
+
+  return (
+    <div className={`productCard ${colorClass}`}>
+      <div className="deleteBtnWrapper">
+        <button className="btnDanger" onClick={() => removeProduct(originalIndex)}>x</button>
+      </div>
+
+      <input
+        className="cardInput productTitleInput"
+        value={p.name}
+        onChange={(e) => updateField(originalIndex, "name", e.target.value)}
+        placeholder="Product Name"
+      />
+
+      <div className="cardDetailsGrid">
+        <div>Stock:</div>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
+            <input
+              className="cardInput"
+              type="number"
+              value={p.stock}
+              onChange={(e) => updateField(originalIndex, "stock", e.target.value)}
+              style={{ width: "60%" }}
+            />
+            <button
+              type="button"
+              className={`btn btnUnit ${p.unit === "kg" ? "active" : ""}`}
+              onClick={() => updateField(originalIndex, "unit", "kg")}
+            >
+              kg
+            </button>
+            <button
+              type="button"
+              className={`btn btnUnit ${p.unit === "units" ? "active" : ""}`}
+              onClick={() => updateField(originalIndex, "unit", "units")}
+            >
+              units
+            </button>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="200"
+            value={p.stock}
+            onChange={(e) => handleSliderChange(originalIndex, Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        <div>Sale:</div>
+        <div className="priceInputWrapper">
+          <span>$</span>
+          <input
+            className="cardInput"
+            type="number"
+            step="0.01"
+            value={Number(p.salePrice).toFixed(2)}
+            onChange={(e) => updateField(originalIndex, "salePrice", parseFloat(e.target.value) || 0)}
+          />
+        </div>
+
+        <div>Cost:</div>
+        <div className="priceInputWrapper">
+          <span>$</span>
+          <input
+            className="cardInput"
+            type="number"
+            step="0.01"
+            value={Number(p.costPrice).toFixed(2)}
+            onChange={(e) => updateField(originalIndex, "costPrice", parseFloat(e.target.value) || 0)}
+          />
+        </div>
+
+        <div>Expiry:</div>
+        <input
+          className="cardInput"
+          type="date"
+          value={p.expiry}
+          onChange={(e) => updateField(originalIndex, "expiry", e.target.value)}
+        />
+
+        <div>Days to go:</div>
+        <div className="daysToGo">
+          {p.expiry ? `${getDaysLeft(p.expiry)}` : "-"}
+        </div>
+
+        <div>Suggested Price:</div>
+        <div style={{ fontWeight: "bold" }}>${suggestPrice(p, discounts)}</div>
+
+        <div>Profit:</div>
+        <div style={{ fontWeight: "bold" }}>${calculateProfit(p)}</div>
+      </div>
+    </div>
+  );
+});
 
 export default function App() {
   // -----------------------
@@ -12,27 +125,20 @@ export default function App() {
     return saved ? JSON.parse(saved) : defaultProducts;
   });
 
-  // User accounts (default admin: jared / fruitandveg)
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("users");
     return saved ? JSON.parse(saved) : [{ username: "jared", password: "fruitandveg" }];
   });
 
-  // Discount settings
   const [discounts, setDiscounts] = useState(() => {
     const saved = localStorage.getItem("discountSettings");
     return saved ? JSON.parse(saved) : { discount5: 0.05, discount3: 0.10, discount2: 0.20 };
   });
 
-  // Authentication
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
   const [loginError, setLoginError] = useState("");
-  
-  // New state for password visibility toggle
   const [showPassword, setShowPassword] = useState(false);
-
-  // Settings panel visibility
   const [showSettings, setShowSettings] = useState(false);
 
   // Settings form states
@@ -46,10 +152,8 @@ export default function App() {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [settingsMsg, setSettingsMsg] = useState("");
 
-  // Sorting state – 'default' (unsorted), 'alpha' (A-Z), 'expiry' (closest expiry first)
   const [sortBy, setSortBy] = useState("default");
 
-  // Persistence
   useEffect(() => {
     localStorage.setItem("products", JSON.stringify(products));
   }, [products]);
@@ -62,11 +166,7 @@ export default function App() {
     localStorage.setItem("discountSettings", JSON.stringify(discounts));
   }, [discounts]);
 
-  // -----------------------------------------------
-  //  DYNAMIC LOADING OF OLD ENGLISH FONT
-  // -----------------------------------------------
   useEffect(() => {
-    // Only add the Google Font link once
     if (!document.getElementById("playfair-font-link")) {
       const link = document.createElement("link");
       link.id = "playfair-font-link";
@@ -76,9 +176,6 @@ export default function App() {
     }
   }, []);
 
-  // -----------------------
-  //  USER GUIDE HANDLER
-  // -----------------------
   const openUserGuide = () => {
     const guideWindow = window.open("", "StockSageUserGuide", "width=900,height=700,scrollbars=yes,resizable=yes");
     if (guideWindow) {
@@ -87,16 +184,12 @@ export default function App() {
     }
   };
 
-  // -----------------------
-  //  LOGIN HANDLER (Case Insensitive)
-  // -----------------------
   const handleLogin = (e) => {
     e.preventDefault();
     const form = e.target;
     const username = form.username.value.trim();
     const password = form.password.value;
 
-    // Convert username to lowercase for case-insensitive comparison
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
     if (user) {
       setIsLoggedIn(true);
@@ -113,15 +206,11 @@ export default function App() {
     setShowSettings(false);
   };
 
-  // -----------------------
-  //  SETTINGS HANDLERS
-  // -----------------------
   const saveDiscounts = () => {
     const d5 = parseFloat(newDiscount5) / 100 || 0;
     const d3 = parseFloat(newDiscount3) / 100 || 0;
     const d2 = parseFloat(newDiscount2) / 100 || 0;
-    const updated = { discount5: d5, discount3: d3, discount2: d2 };
-    setDiscounts(updated);
+    setDiscounts({ discount5: d5, discount3: d3, discount2: d2 });
     setSettingsMsg("Discount percentages saved.");
   };
 
@@ -158,8 +247,7 @@ export default function App() {
       setSettingsMsg("Username already exists.");
       return;
     }
-    const updatedUsers = [...users, { username: newUsername.trim(), password: newUserPassword }];
-    setUsers(updatedUsers);
+    setUsers([...users, { username: newUsername.trim(), password: newUserPassword }]);
     setNewUsername("");
     setNewUserPassword("");
     setSettingsMsg(`User "${newUsername.trim()}" added.`);
@@ -168,51 +256,66 @@ export default function App() {
   // -----------------------
   //  PRODUCT UPDATE HELPERS
   // -----------------------
-  const updateField = (i, field, value) => {
-    const updated = [...products];
+  const updateField = useCallback((i, field, value) => {
+    setProducts((prev) => {
+      const updated = [...prev];
+      let newValue = value;
 
-    if (["stock", "salePrice", "costPrice", "sold"].includes(field)) {
-      value = Math.max(0, Number(value));
-    }
-
-    if (field === "expiry") {
-      const d = new Date(value);
-      if (isNaN(d.getTime())) return;
-    }
-
-    // Special handling for stock updates via number input
-    if (field === "stock") {
-      const oldStock = Number(updated[i].stock) || 0;
-      const newStock = Number(value);
-      
-      if (newStock < oldStock) {
-        const decrease = oldStock - newStock;
-        updated[i].sold = (Number(updated[i].sold) || 0) + decrease;
+      if (["stock", "salePrice", "costPrice", "sold"].includes(field)) {
+        newValue = Math.max(0, Number(value));
       }
-    }
 
-    updated[i][field] = value;
-    setProducts(updated);
-  };
+      if (field === "expiry") {
+        const d = new Date(value);
+        if (isNaN(d.getTime())) return prev;
+      }
 
-  /** When stock is reduced via slider, increase sold count automatically */
-  const handleSliderChange = (i, newStock) => {
-    const updated = [...products];
-    const oldStock = Number(updated[i].stock) || 0;
-    const newStockNum = Number(newStock);
+      let newSold = Number(updated[i].sold) || 0;
+      if (field === "stock") {
+        const oldStock = Number(updated[i].stock) || 0;
+        const newStock = Number(newValue);
+        if (newStock < oldStock) {
+          newSold += (oldStock - newStock);
+        }
+      }
 
-    if (newStockNum < oldStock) {
-      const decrease = oldStock - newStockNum;
-      updated[i].sold = (Number(updated[i].sold) || 0) + decrease;
-    }
+      updated[i] = { 
+        ...updated[i], 
+        [field]: newValue,
+        ...(field === 'stock' ? { sold: newSold } : {})
+      };
+      
+      return updated;
+    });
+  }, []);
 
-    updated[i].stock = newStockNum;
-    setProducts(updated);
-  };
+  const handleSliderChange = useCallback((i, newStock) => {
+    setProducts((prev) => {
+      const updated = [...prev];
+      const oldStock = Number(updated[i].stock) || 0;
+      const newStockNum = Number(newStock);
+      let newSold = Number(updated[i].sold) || 0;
+
+      if (newStockNum < oldStock) {
+        newSold += (oldStock - newStockNum);
+      }
+
+      updated[i] = { ...updated[i], stock: newStockNum, sold: newSold };
+      return updated;
+    });
+  }, []);
+
+  const removeProduct = useCallback((i) => {
+    setProducts((prev) => {
+      const updated = [...prev];
+      updated.splice(i, 1);
+      return updated;
+    });
+  }, []);
 
   const addProduct = () => {
-    setProducts([
-      ...products,
+    setProducts((prev) => [
+      ...prev,
       {
         name: "",
         stock: 0,
@@ -225,31 +328,11 @@ export default function App() {
     ]);
   };
 
-  const removeProduct = (i) => {
-    const updated = [...products];
-    updated.splice(i, 1);
-    setProducts(updated);
-  };
-
-  /**
-   * Returns a highly vibrant background colour based on days until expiry.
-   */
-  const getColor = (days) => {
-    if (days <= 1) return "#ff3b30"; // vibrant red
-    if (days <= 3) return "#ffcc00"; // sunny gold
-    return "#34c759";               // fresh green
-  };
-
   // --------------------------------------------------
   //  SORTING LOGIC
   // --------------------------------------------------
-  /**
-   * Creates a sorted version of the products array along with original indices.
-   * Sorting keeps the original index for all editing operations.
-   */
   const sortedProducts = (() => {
     const withIndex = products.map((p, idx) => ({ ...p, _originalIndex: idx }));
-
     if (sortBy === "alpha") {
       return withIndex.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === "expiry") {
@@ -259,81 +342,38 @@ export default function App() {
         return daysA - daysB;
       });
     } else {
-      // default – keep insertion order
       return withIndex;
     }
   })();
-
-  // -----------------------
-  //  COMMON TITLE STYLE
-  // -----------------------
-  const stockSageTitleStyle = {
-    fontFamily: "'Playfair Display', serif",
-    fontWeight: 700,
-    fontSize: "2em",
-    letterSpacing: "1px",
-    margin: 0
-  };
 
   // =======================
   //  LOGIN SCREEN
   // =======================
   if (!isLoggedIn) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundImage: "url('https://images.unsplash.com/photo-1542838132-92c53300491e')",
-          backgroundSize: "cover",
-          backgroundPosition: "center"
-        }}
-      >
-        <form
-          onSubmit={handleLogin}
-          style={{
-            background: "rgba(255,255,255,0.9)",
-            padding: 30,
-            borderRadius: 12,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-            textAlign: "center"
-          }}
-        >
-          {/* Old-fashioned shop title on the login page */}
-          <h1 style={stockSageTitleStyle}>Stock Sage</h1>
-          <h2 style={{ marginTop: 10 }}>Login</h2>
-          <div style={{ marginBottom: 10 }}>
-            <input name="username" placeholder="Username" required style={{ padding: 8, width: "100%" }} />
+      <div className="loginContainer">
+        <form onSubmit={handleLogin} className="loginForm">
+          <h1 className="title">Stock Sage</h1>
+          <h2>Login</h2>
+          <div className="inputGroup">
+            <input className="formInput" name="username" placeholder="Username" required />
           </div>
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <input 
-                name="password" 
-                type={showPassword ? "text" : "password"} 
-                placeholder="Password" 
-                required 
-                style={{ padding: 8, flex: 1 }} 
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  padding: "8px 12px",
-                  cursor: "pointer",
-                  background: "#f0f0f0",
-                  border: "1px solid #ccc",
-                  borderRadius: 4,
-                  fontSize: "12px"
-                }}
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
+          <div className="inputGroup passwordWrapper">
+            <input 
+              className="formInput"
+              name="password" 
+              type={showPassword ? "text" : "password"} 
+              placeholder="Password" 
+              required 
+            />
+            <button type="button" className="btn" onClick={() => setShowPassword(!showPassword)}>
+              {showPassword ? "Hide" : "Show"}
+            </button>
           </div>
-          {loginError && <div style={{ color: "red", marginBottom: 8 }}>{loginError}</div>}
-          <button type="submit" style={{ padding: "8px 20px", cursor: "pointer" }}>Sign In</button>
+          {loginError && <div className="errorText">{loginError}</div>}
+          <button type="submit" className="btn btnPrimary" style={{ width: "100%", marginTop: "10px" }}>
+            Sign In
+          </button>
         </form>
       </div>
     );
@@ -343,120 +383,38 @@ export default function App() {
   //  MAIN APP (LOGGED IN)
   // =======================
   return (
-    <div
-      style={{
-        padding: 20,
-        minHeight: "100vh",
-        backgroundImage: "url('https://images.unsplash.com/photo-1542838132-92c53300491e')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        filter: "brightness(0.9) saturate(0.8)"
-      }}
-    >
-      {/* ---- HEADER WITH SORTING, SETTINGS & LOGOUT ---- */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 15 }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <div
-            style={{
-              background: "rgba(255, 255, 255, 0.75)",
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid rgba(0,0,0,0.1)",
-              backdropFilter: "blur(4px)"
-            }}
-          >
-            <h1 style={stockSageTitleStyle}>Stock Sage</h1>
+    <div className="appContainer">
+      
+      {/* ---- HEADER ---- */}
+      <div className="header">
+        <div className="headerLeft">
+          <div className="titleBox">
+            <h1 className="title">Stock Sage</h1>
           </div>
-          {/* USER GUIDE BUTTON */}
-          <button
-            onClick={openUserGuide}
-            title="Open User Guide"
-            style={{
-              background: "#1a1a2e",
-              color: "white",
-              border: "none",
-              borderRadius: 8,
-              padding: "10px 18px",
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: 600,
-              letterSpacing: "0.5px",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-              transition: "background 0.2s"
-            }}
-            onMouseEnter={(e) => e.target.style.background = "#2d2d44"}
-            onMouseLeave={(e) => e.target.style.background = "#1a1a2e"}
-          >
+          <button onClick={openUserGuide} title="Open User Guide" className="btnPrimary">
             📖 User Guide
           </button>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {/* USER ICON */}
-          <div style={{ background: "rgba(255,255,255,0.8)", padding: "6px 12px", borderRadius: 8 }}>
-            👤 {currentUser}
-          </div>
-
-          {/* SORTING BUTTON – ALPHABETICAL */}
+        <div className="headerRight">
+          <div className="userBadge">👤 {currentUser}</div>
           <button
             onClick={() => setSortBy("alpha")}
             title="Sort alphabetically (A‑Z)"
-            style={{
-              background: sortBy === "alpha" ? "#e0e7ff" : "white",
-              border: "1px solid #aaa",
-              borderRadius: 8,
-              padding: "6px 10px",
-              cursor: "pointer",
-              fontSize: 16,
-              fontWeight: sortBy === "alpha" ? "bold" : "normal"
-            }}
+            className={`btn btnSort ${sortBy === "alpha" ? "active" : ""}`}
           >
             A‑Z
           </button>
-
-          {/* SORTING BUTTON – BY DAYS TO GO (CLOSEST FIRST) */}
           <button
             onClick={() => setSortBy("expiry")}
             title="Sort by days to go (lowest first)"
-            style={{
-              background: sortBy === "expiry" ? "#e0e7ff" : "white",
-              border: "1px solid #aaa",
-              borderRadius: 8,
-              padding: "6px 10px",
-              cursor: "pointer",
-              fontSize: 16,
-              fontWeight: sortBy === "expiry" ? "bold" : "normal"
-            }}
+            className={`btn btnSort ${sortBy === "expiry" ? "active" : ""}`}
           >
             ⏳
           </button>
-
-          {/* SETTINGS COG */}
-          <button
-            onClick={() => setShowSettings(true)}
-            title="Settings"
-            style={{
-              background: "white",
-              border: "1px solid #aaa",
-              borderRadius: 8,
-              padding: "6px 10px",
-              cursor: "pointer",
-              fontSize: 18
-            }}
-          >
+          <button onClick={() => setShowSettings(true)} title="Settings" className="btn btnIcon">
             ⚙️
           </button>
-
-          {/* LOGOUT */}
-          <button
-            onClick={handleLogout}
-            style={{
-              background: "#f3f4f6",
-              border: "1px solid #aaa",
-              borderRadius: 8,
-              padding: "6px 12px",
-              cursor: "pointer"
-            }}
-          >
+          <button onClick={handleLogout} className="btn">
             Logout
           </button>
         </div>
@@ -464,263 +422,77 @@ export default function App() {
 
       {/* ---- SETTINGS MODAL ---- */}
       {showSettings && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000
-          }}
-          onClick={() => setShowSettings(false)}
-        >
-          <div
-            style={{
-              background: "white",
-              padding: 20,
-              borderRadius: 12,
-              width: 400,
-              maxHeight: "90vh",
-              overflowY: "auto"
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="modalOverlay" onClick={() => setShowSettings(false)}>
+          <div className="modalContent" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ marginTop: 0 }}>Settings</h2>
-
-            {/* Discount percentages */}
-            <fieldset style={{ marginBottom: 15, padding: 10 }}>
-              <legend><strong>Price Reduction Percentages</strong></legend>
-              <div style={{ marginBottom: 8 }}>
+            
+            <fieldset>
+              <legend>Price Reduction Percentages</legend>
+              <div className="inputGroup">
                 <label>5-3 days left (%): </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={newDiscount5}
-                  onChange={(e) => setNewDiscount5(e.target.value)}
-                  style={{ width: 60, marginLeft: 8 }}
-                />
+                <input className="formInput" type="number" min="0" max="100" value={newDiscount5} onChange={(e) => setNewDiscount5(e.target.value)} />
               </div>
-              <div style={{ marginBottom: 8 }}>
+              <div className="inputGroup">
                 <label>3-2 days left (%): </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={newDiscount3}
-                  onChange={(e) => setNewDiscount3(e.target.value)}
-                  style={{ width: 60, marginLeft: 8 }}
-                />
+                <input className="formInput" type="number" min="0" max="100" value={newDiscount3} onChange={(e) => setNewDiscount3(e.target.value)} />
               </div>
-              <div style={{ marginBottom: 8 }}>
+              <div className="inputGroup">
                 <label>2-1 days left (%): </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={newDiscount2}
-                  onChange={(e) => setNewDiscount2(e.target.value)}
-                  style={{ width: 60, marginLeft: 8 }}
-                />
+                <input className="formInput" type="number" min="0" max="100" value={newDiscount2} onChange={(e) => setNewDiscount2(e.target.value)} />
               </div>
-              <button onClick={saveDiscounts} style={{ cursor: "pointer" }}>Save Discounts</button>
+              <button onClick={saveDiscounts} className="btn btnPrimary">Save Discounts</button>
             </fieldset>
 
-            {/* Change Password */}
-            <fieldset style={{ marginBottom: 15, padding: 10 }}>
-              <legend><strong>Change Password</strong></legend>
-              <div style={{ marginBottom: 8 }}>
+            <fieldset>
+              <legend>Change Password</legend>
+              <div className="inputGroup">
                 <label>Current password: </label>
-                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
+                <input className="formInput" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
               </div>
-              <div style={{ marginBottom: 8 }}>
+              <div className="inputGroup">
                 <label>New password: </label>
-                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
+                <input className="formInput" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
               </div>
-              <div style={{ marginBottom: 8 }}>
+              <div className="inputGroup">
                 <label>Confirm new password: </label>
-                <input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
+                <input className="formInput" type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} />
               </div>
-              <button onClick={changePassword} style={{ cursor: "pointer" }}>Update Password</button>
+              <button onClick={changePassword} className="btn btnPrimary">Update Password</button>
             </fieldset>
 
-            {/* Add User */}
-            <fieldset style={{ marginBottom: 15, padding: 10 }}>
-              <legend><strong>Add New User</strong></legend>
-              <div style={{ marginBottom: 8 }}>
+            <fieldset>
+              <legend>Add New User</legend>
+              <div className="inputGroup">
                 <label>New username: </label>
-                <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
+                <input className="formInput" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
               </div>
-              <div style={{ marginBottom: 8 }}>
+              <div className="inputGroup">
                 <label>Password: </label>
-                <input type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} style={{ width: "100%", marginTop: 4 }} />
+                <input className="formInput" type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} />
               </div>
-              <button onClick={addUser} style={{ cursor: "pointer" }}>Add User</button>
+              <button onClick={addUser} className="btn btnPrimary">Add User</button>
             </fieldset>
 
-            {settingsMsg && <div style={{ color: "green", marginTop: 10 }}>{settingsMsg}</div>}
-            <button onClick={() => setShowSettings(false)} style={{ marginTop: 10, cursor: "pointer" }}>Close</button>
+            {settingsMsg && <div className="settingsMessage">{settingsMsg}</div>}
+            <button onClick={() => setShowSettings(false)} className="btn" style={{ width: "100%", marginTop: "10px" }}>Close</button>
           </div>
         </div>
       )}
 
       {/* ---- PRODUCT GRID ---- */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-          gap: 8
-        }}
-      >
-        {sortedProducts.map((p) => {
-          // p._originalIndex is the real index in the original products array
-          const i = p._originalIndex;
-          const days = getDaysLeft(p.expiry);
-          return (
-            <div
-              key={i}
-              style={{
-                background: getColor(days),
-                padding: 6,
-                borderRadius: 6,
-                position: "relative",
-                fontSize: 12
-              }}
-            >
-              <button
-                onClick={() => removeProduct(i)}
-                style={{ position: "absolute", top: 2, right: 4 }}
-              >
-                x
-              </button>
-
-              <input
-                value={p.name}
-                onChange={(e) => updateField(i, "name", e.target.value)}
-                style={{fontWeight: "bold" }}
-              />
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 3,
-                  marginTop: 4
-                }}
-              >
-                <div>Stock:</div>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <input
-                      type="number"
-                      value={p.stock}
-                      onChange={(e) => updateField(i, "stock", e.target.value)}
-                      style={{ width: "50%" }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => updateField(i, "unit", "kg")}
-                      style={{
-                        fontWeight: p.unit === "kg" ? "bold" : "normal",
-                        background: p.unit === "kg" ? "#d1d5db" : "#f3f4f6",
-                        border: "1px solid #9ca3af",
-                        borderRadius: 4,
-                        padding: "1px 4px",
-                        cursor: "pointer",
-                        fontSize: 10
-                      }}
-                    >
-                      kg
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateField(i, "unit", "units")}
-                      style={{
-                        fontWeight: p.unit === "units" ? "bold" : "normal",
-                        background: p.unit === "units" ? "#d1d5db" : "#f3f4f6",
-                        border: "1px solid #9ca3af",
-                        borderRadius: 4,
-                        padding: "1px 4px",
-                        cursor: "pointer",
-                        fontSize: 10
-                      }}
-                    >
-                      units
-                    </button>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="200"
-                    value={p.stock}
-                    onChange={(e) => handleSliderChange(i, Number(e.target.value))}
-                    style={{ width: "100%", marginTop: 2 }}
-                  />
-                </div>
-
-                {/* Sale Price */}
-                <div>Sale:</div>
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <span style={{ marginRight: 2 }}>$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={Number(p.salePrice).toFixed(2)}
-                    onChange={(e) => updateField(i, "salePrice", parseFloat(e.target.value) || 0)}
-                    style={{ width: "50%" }}
-                  />
-                </div>
-
-                {/* Cost Price */}
-                <div>Cost:</div>
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <span style={{ marginRight: 2 }}>$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={Number(p.costPrice).toFixed(2)}
-                    onChange={(e) => updateField(i, "costPrice", parseFloat(e.target.value) || 0)}
-                    style={{ width: "50%" }}
-                  />
-                </div>
-
-                <div>Expiry:</div>
-                <input
-                  type="date"
-                  value={p.expiry}
-                  onChange={(e) => updateField(i, "expiry", e.target.value)}
-                />
-
-                <div>Days to go:</div>
-                <div style={{ fontSize: "1.3em", fontWeight: "bold" }}>
-                  {p.expiry ? `${getDaysLeft(p.expiry)}` : "-"}
-                </div>
-
-                <div>Suggested Next Price:</div>
-                <div>${suggestPrice(p, discounts)}</div>
-
-                <div>Profit:</div>
-                <div>${calculateProfit(p)}</div>
-              </div>
-            </div>
-          );
-        })}
-
-        <div
-          onClick={addProduct}
-          style={{
-            border: "2px dashed white",
-            color: "white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            borderRadius: 6,
-            minHeight: 100
-          }}
-        >
+      <div className="productGrid">
+        {sortedProducts.map((p) => (
+          <ProductCard
+            key={p._originalIndex}
+            p={p}
+            originalIndex={p._originalIndex}
+            updateField={updateField}
+            handleSliderChange={handleSliderChange}
+            removeProduct={removeProduct}
+            discounts={discounts}
+          />
+        ))}
+        <div onClick={addProduct} className="addProductBtn">
           + Add New Product
         </div>
       </div>
