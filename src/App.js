@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, memo } from "react";
 import { defaultProducts } from "./defaultProducts";
 import { getDaysLeft, suggestPrice, calculateProfit } from "./stockHelpers";
 import { getUserGuideHTML } from "./userGuide";
-
+ 
 // --------------------------------------------------
 //  HELPERS
 // --------------------------------------------------
