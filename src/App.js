@@ -70,7 +70,7 @@ const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, 
           />
         </div>
 
-        <div>Sale:</div>
+        <div>Sale Price:</div>
         <div className="priceInputWrapper">
           <span>$</span>
           <input
@@ -82,7 +82,7 @@ const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, 
           />
         </div>
 
-        <div>Cost:</div>
+        <div>Cost Price:</div>
         <div className="priceInputWrapper">
           <span>$</span>
           <input
