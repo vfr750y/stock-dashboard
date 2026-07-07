@@ -35,7 +35,7 @@ const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, 
       />
 
       <div className="cardDetailsGrid">
-        <div>Stock:</div>
+        <div>Product remaining:</div>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
             <input
@@ -94,7 +94,7 @@ const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, 
           />
         </div>
 
-        <div>Expiry:</div>
+        <div>Expiry date:</div>
         <input
           className="cardInput"
           type="date"
@@ -102,15 +102,15 @@ const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, 
           onChange={(e) => updateField(originalIndex, "expiry", e.target.value)}
         />
 
-        <div>Days to go:</div>
+        <div>Days until expiry:</div>
         <div className="daysToGo">
           {p.expiry ? `${getDaysLeft(p.expiry)}` : "-"}
         </div>
 
-        <div>Suggested Price:</div>
+        <div>Suggested new price:</div>
         <div style={{ fontWeight: "bold" }}>${suggestPrice(p, discounts)}</div>
 
-        <div>Profit:</div>
+        <div>Profit on this item:</div>
         <div style={{ fontWeight: "bold" }}>${calculateProfit(p)}</div>
       </div>
     </div>
