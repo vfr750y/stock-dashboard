@@ -480,7 +480,7 @@ export default function App() {
     }
   }, []);
 
-  // -----------------------
+  // ------------------------
   //  SORTING LOGIC
   // -----------------------
   const sortedProducts = useMemo(() => {
