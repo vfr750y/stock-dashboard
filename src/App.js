@@ -15,9 +15,9 @@ const getCardColorClass = (days) => {
 };
 
 // --------------------------------------------------
-//  PRODUCT CARD COMPONENT (unchanged)
+//  PRODUCT CARD COMPONENT
 // --------------------------------------------------
-const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, handleSliderChange, discounts }) => {
+const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, discounts }) => {
   const days = getDaysLeft(p.expiry);
   const colorClass = getCardColorClass(days);
 
@@ -42,6 +42,7 @@ const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, 
               className="cardInput"
               type="number"
               value={p.stock}
+              max={p.sold > 0 ? p.stock : undefined}
               onChange={(e) => updateField(originalIndex, "stock", e.target.value)}
               style={{ width: "60%" }}
             />
@@ -60,14 +61,6 @@ const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, 
               units
             </button>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="200"
-            value={p.stock}
-            onChange={(e) => handleSliderChange(originalIndex, Number(e.target.value))}
-            style={{ width: "100%" }}
-          />
         </div>
 
         <div>Sale Price:</div>
@@ -108,7 +101,15 @@ const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, 
         </div>
 
         <div>Suggested new price:</div>
-        <div style={{ fontWeight: "bold" }}>${suggestPrice(p, discounts)}</div>
+        <div style={{ fontWeight: "bold", display: "flex", gap: "8px", alignItems: "center" }}>
+          ${suggestPrice(p, discounts)}
+          <button 
+            className="btn btnUnit"
+            onClick={() => updateField(originalIndex, "salePrice", suggestPrice(p, discounts))}
+          >
+            Apply
+          </button>
+        </div>
 
         <div>Profit on this item:</div>
         <div style={{ fontWeight: "bold" }}>${calculateProfit(p)}</div>
@@ -190,6 +191,7 @@ export default function App() {
           cost_price: p.costPrice,
           expiry: p.expiry,
           sold: p.sold,
+          revenue: p.revenue || 0,
         }))
       );
       if (insertError) {
@@ -370,6 +372,7 @@ export default function App() {
         cost_price: product.costPrice,
         expiry: product.expiry,
         sold: product.sold,
+        revenue: product.revenue,
       })
       .eq("id", product.id);
     if (error) {
@@ -384,7 +387,7 @@ export default function App() {
       const oldProduct = updated[index];
       let newValue = value;
 
-      if (["stock", "salePrice", "costPrice", "sold"].includes(field)) {
+      if (["stock", "salePrice", "costPrice", "sold", "revenue"].includes(field)) {
         newValue = Math.max(0, Number(value));
       }
 
@@ -394,47 +397,35 @@ export default function App() {
       }
 
       let newSold = Number(oldProduct.sold) || 0;
+      let newRevenue = Number(oldProduct.revenue) || 0;
+
       if (field === "stock") {
         const oldStock = Number(oldProduct.stock) || 0;
         const newStock = Number(newValue);
+
+        // Logic Enforcement: Prevent stock increases if items have already been sold
+        if (newStock > oldStock && newSold > 0) {
+          return prev; // Reject the state change
+        }
+
+        // Logic update: Track cumulative revenue at the CURRENT sale price
         if (newStock < oldStock) {
-          newSold += oldStock - newStock;
+          const amountSold = oldStock - newStock;
+          newSold += amountSold;
+          newRevenue += (amountSold * Number(oldProduct.salePrice));
         }
       }
 
       const updatedProduct = {
         ...oldProduct,
         [field]: newValue,
-        ...(field === "stock" ? { sold: newSold } : {}),
+        ...(field === "stock" ? { sold: newSold, revenue: newRevenue } : {}),
       };
       updated[index] = updatedProduct;
 
       // Sync to Supabase
       syncProductToDb(updatedProduct);
 
-      return updated;
-    });
-  }, [syncProductToDb]);
-
-  const handleSliderChange = useCallback((index, newStock) => {
-    setProducts((prev) => {
-      const updated = [...prev];
-      const oldProduct = updated[index];
-      const oldStock = Number(oldProduct.stock) || 0;
-      let newSold = Number(oldProduct.sold) || 0;
-
-      if (newStock < oldStock) {
-        newSold += oldStock - newStock;
-      }
-
-      const updatedProduct = {
-        ...oldProduct,
-        stock: newStock,
-        sold: newSold,
-      };
-      updated[index] = updatedProduct;
-
-      syncProductToDb(updatedProduct);
       return updated;
     });
   }, [syncProductToDb]);
@@ -466,6 +457,7 @@ export default function App() {
       cost_price: 0,
       expiry: "",
       sold: 0,
+      revenue: 0,
     };
     const { data, error } = await supabase
       .from("products")
@@ -509,7 +501,7 @@ export default function App() {
     }
   };
 
-  // Load Playfair font (unchanged)
+  // Load Playfair font
   useEffect(() => {
     if (!document.getElementById("playfair-font-link")) {
       const link = document.createElement("link");
@@ -726,7 +718,6 @@ export default function App() {
             p={p}
             originalIndex={p._originalIndex}
             updateField={updateField}
-            handleSliderChange={handleSliderChange}
             removeProduct={removeProduct}
             discounts={discounts}
           />

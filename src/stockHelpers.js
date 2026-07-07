@@ -18,11 +18,11 @@ export function suggestPrice(p, discounts) {
   return Math.max(p.costPrice, discounted).toFixed(2);
 }
 
-/** Calculate real-time profit: (salePrice - costPrice) * sold */
+/** Calculate real-time profit: cumulative revenue - (costPrice * sold) */
 export function calculateProfit(p) {
   const sold = Number(p.sold || 0);
-  const sale = Number(p.salePrice || 0);
   const cost = Number(p.costPrice || 0);
+  const revenue = Number(p.revenue || 0);
 
-  return ((sale - cost) * sold).toFixed(2);
+  return (revenue - (cost * sold)).toFixed(2);
 }
