@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, memo } from "react";
-import "./App.css"; // IMPORTANT: Import your new stylesheet here
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import "./App.css";
 import { defaultProducts } from "./defaultProducts";
 import { getDaysLeft, suggestPrice, calculateProfit } from "./stockHelpers";
 import { getUserGuideHTML } from "./userGuide";
+import { supabase } from "./supabaseClient";
 
 // --------------------------------------------------
 //  HELPERS
@@ -14,9 +15,9 @@ const getCardColorClass = (days) => {
 };
 
 // --------------------------------------------------
-//  MEMOIZED PRODUCT CARD COMPONENT
+//  PRODUCT CARD COMPONENT (unchanged)
 // --------------------------------------------------
-const ProductCard = memo(({ p, originalIndex, updateField, removeProduct, handleSliderChange, discounts }) => {
+const ProductCard = React.memo(({ p, originalIndex, updateField, removeProduct, handleSliderChange, discounts }) => {
   const days = getDaysLeft(p.expiry);
   const colorClass = getCardColorClass(days);
 
@@ -116,35 +117,26 @@ const ProductCard = memo(({ p, originalIndex, updateField, removeProduct, handle
   );
 });
 
+// --------------------------------------------------
+//  MAIN APP
+// --------------------------------------------------
 export default function App() {
   // -----------------------
-  //  STATE & PERSISTENCE
+  //  STATE
   // -----------------------
-  const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem("products");
-    return saved ? JSON.parse(saved) : defaultProducts;
-  });
-
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem("users");
-    return saved ? JSON.parse(saved) : [{ username: "jared", password: "fruitandveg" }];
-  });
-
-  const [discounts, setDiscounts] = useState(() => {
-    const saved = localStorage.getItem("discountSettings");
-    return saved ? JSON.parse(saved) : { discount5: 0.05, discount3: 0.10, discount2: 0.20 };
-  });
-
+  const [products, setProducts] = useState([]);
+  const [discounts, setDiscounts] = useState({ discount5: 0.05, discount3: 0.10, discount2: 0.20 });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
   const [loginError, setLoginError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Settings form states
-  const [newDiscount5, setNewDiscount5] = useState((discounts.discount5 * 100).toString());
-  const [newDiscount3, setNewDiscount3] = useState((discounts.discount3 * 100).toString());
-  const [newDiscount2, setNewDiscount2] = useState((discounts.discount2 * 100).toString());
+  const [newDiscount5, setNewDiscount5] = useState("5");
+  const [newDiscount3, setNewDiscount3] = useState("10");
+  const [newDiscount2, setNewDiscount2] = useState("20");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -154,111 +146,242 @@ export default function App() {
 
   const [sortBy, setSortBy] = useState("default");
 
-  useEffect(() => {
-    localStorage.setItem("products", JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem("users", JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    localStorage.setItem("discountSettings", JSON.stringify(discounts));
-  }, [discounts]);
-
-  useEffect(() => {
-    if (!document.getElementById("playfair-font-link")) {
-      const link = document.createElement("link");
-      link.id = "playfair-font-link";
-      link.rel = "stylesheet";
-      link.href = "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap";
-      document.head.appendChild(link);
+  // -----------------------
+  //  DATA FETCHING FROM SUPABASE
+  // -----------------------
+  const fetchSettings = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("settings")
+      .select("*")
+      .maybeSingle();
+    if (error) {
+      console.error("Error fetching settings:", error);
+      return;
+    }
+    if (data) {
+      setDiscounts({
+        discount5: data.discount5,
+        discount3: data.discount3,
+        discount2: data.discount2,
+      });
+      setNewDiscount5((data.discount5 * 100).toString());
+      setNewDiscount3((data.discount3 * 100).toString());
+      setNewDiscount2((data.discount2 * 100).toString());
     }
   }, []);
 
-  const openUserGuide = () => {
-    const guideWindow = window.open("", "StockSageUserGuide", "width=900,height=700,scrollbars=yes,resizable=yes");
-    if (guideWindow) {
-      guideWindow.document.write(getUserGuideHTML());
-      guideWindow.document.close();
+  const fetchProducts = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (error) {
+      console.error("Error fetching products:", error);
+      return;
     }
-  };
+    if (data && data.length === 0) {
+      // Seed default products
+      const { error: insertError } = await supabase.from("products").insert(
+        defaultProducts.map((p) => ({
+          name: p.name,
+          stock: p.stock,
+          unit: p.unit,
+          sale_price: p.salePrice,
+          cost_price: p.costPrice,
+          expiry: p.expiry,
+          sold: p.sold,
+        }))
+      );
+      if (insertError) {
+        console.error("Error seeding default products:", insertError);
+      } else {
+        // Refetch after seeding
+        const { data: newData, error: refetchError } = await supabase
+          .from("products")
+          .select("*")
+          .order("created_at", { ascending: true });
+        if (!refetchError && newData) {
+          setProducts(newData);
+        }
+        return;
+      }
+    }
+    if (data) {
+      setProducts(data);
+    }
+  }, []);
 
-  const handleLogin = (e) => {
+  const loadInitialData = useCallback(async () => {
+    setIsLoading(true);
+    await Promise.all([fetchSettings(), fetchProducts()]);
+    setIsLoading(false);
+  }, [fetchSettings, fetchProducts]);
+
+  // -----------------------
+  //  AUTHENTICATION
+  // -----------------------
+  const handleLogin = async (e) => {
     e.preventDefault();
     const form = e.target;
-    const username = form.username.value.trim();
+    const email = form.username.value.trim(); // treat as email
     const password = form.password.value;
 
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
-    if (user) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setLoginError(error.message);
+      return;
+    }
+    if (data.user) {
       setIsLoggedIn(true);
-      setCurrentUser(username);
+      setCurrentUser(data.user);
       setLoginError("");
-    } else {
-      setLoginError("Invalid username or password");
+      await loadInitialData();
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setIsLoggedIn(false);
-    setCurrentUser("");
+    setCurrentUser(null);
     setShowSettings(false);
   };
 
-  const saveDiscounts = () => {
+  // Check session on mount and listen for auth changes
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setIsLoggedIn(true);
+        setCurrentUser(session.user);
+        await loadInitialData();
+      } else {
+        setIsLoading(false);
+      }
+    };
+    checkSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        setIsLoggedIn(true);
+        setCurrentUser(session.user);
+        await loadInitialData();
+      } else if (event === "SIGNED_OUT") {
+        setIsLoggedIn(false);
+        setCurrentUser(null);
+        setProducts([]);
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, [loadInitialData]);
+
+  // -----------------------
+  //  SETTINGS OPERATIONS
+  // -----------------------
+  const saveDiscounts = async () => {
     const d5 = parseFloat(newDiscount5) / 100 || 0;
     const d3 = parseFloat(newDiscount3) / 100 || 0;
     const d2 = parseFloat(newDiscount2) / 100 || 0;
-    setDiscounts({ discount5: d5, discount3: d3, discount2: d2 });
-    setSettingsMsg("Discount percentages saved.");
+
+    // Get the settings row id (there should be only one)
+    const { data: settingsData, error: fetchError } = await supabase
+      .from("settings")
+      .select("id")
+      .maybeSingle();
+    if (fetchError || !settingsData) {
+      setSettingsMsg("Failed to fetch settings ID");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("settings")
+      .update({ discount5: d5, discount3: d3, discount2: d2 })
+      .eq("id", settingsData.id);
+
+    if (error) {
+      setSettingsMsg("Failed to save discounts: " + error.message);
+    } else {
+      setDiscounts({ discount5: d5, discount3: d3, discount2: d2 });
+      setSettingsMsg("Discount percentages saved.");
+    }
   };
 
-  const changePassword = () => {
-    const user = users.find(u => u.username === currentUser);
-    if (!user || user.password !== currentPassword) {
-      setSettingsMsg("Current password is incorrect.");
+  const changePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setSettingsMsg("Please fill in all password fields.");
       return;
     }
     if (newPassword !== confirmNewPassword) {
       setSettingsMsg("New passwords do not match.");
       return;
     }
-    if (newPassword.length < 1) {
-      setSettingsMsg("Password cannot be empty.");
-      return;
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    if (error) {
+      setSettingsMsg("Failed to change password: " + error.message);
+    } else {
+      setSettingsMsg("Password changed successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
     }
-    const updatedUsers = users.map(u =>
-      u.username === currentUser ? { ...u, password: newPassword } : u
-    );
-    setUsers(updatedUsers);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmNewPassword("");
-    setSettingsMsg("Password changed successfully.");
   };
 
-  const addUser = () => {
-    if (!newUsername.trim() || !newUserPassword.trim()) {
-      setSettingsMsg("Username and password are required.");
+  const addUser = async () => {
+    const email = newUsername.trim();
+    const password = newUserPassword.trim();
+    if (!email || !password) {
+      setSettingsMsg("Email and password are required.");
       return;
     }
-    if (users.some(u => u.username.toLowerCase() === newUsername.trim().toLowerCase())) {
-      setSettingsMsg("Username already exists.");
-      return;
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (error) {
+      setSettingsMsg("Failed to add user: " + error.message);
+    } else {
+      setSettingsMsg(`User "${email}" added. They can now log in.`);
+      setNewUsername("");
+      setNewUserPassword("");
     }
-    setUsers([...users, { username: newUsername.trim(), password: newUserPassword }]);
-    setNewUsername("");
-    setNewUserPassword("");
-    setSettingsMsg(`User "${newUsername.trim()}" added.`);
   };
 
   // -----------------------
-  //  PRODUCT UPDATE HELPERS
+  //  PRODUCT CRUD (with Supabase sync)
   // -----------------------
-  const updateField = useCallback((i, field, value) => {
+  const syncProductToDb = useCallback(async (product) => {
+    if (!product.id) return; // not yet persisted
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: product.name,
+        stock: product.stock,
+        unit: product.unit,
+        sale_price: product.salePrice,
+        cost_price: product.costPrice,
+        expiry: product.expiry,
+        sold: product.sold,
+      })
+      .eq("id", product.id);
+    if (error) {
+      console.error("Failed to sync product:", error);
+    }
+  }, []);
+
+  const updateField = useCallback((index, field, value) => {
+    // Optimistically update local state, then sync to DB
     setProducts((prev) => {
       const updated = [...prev];
+      const oldProduct = updated[index];
       let newValue = value;
 
       if (["stock", "salePrice", "costPrice", "sold"].includes(field)) {
@@ -270,68 +393,97 @@ export default function App() {
         if (isNaN(d.getTime())) return prev;
       }
 
-      let newSold = Number(updated[i].sold) || 0;
+      let newSold = Number(oldProduct.sold) || 0;
       if (field === "stock") {
-        const oldStock = Number(updated[i].stock) || 0;
+        const oldStock = Number(oldProduct.stock) || 0;
         const newStock = Number(newValue);
         if (newStock < oldStock) {
-          newSold += (oldStock - newStock);
+          newSold += oldStock - newStock;
         }
       }
 
-      updated[i] = { 
-        ...updated[i], 
+      const updatedProduct = {
+        ...oldProduct,
         [field]: newValue,
-        ...(field === 'stock' ? { sold: newSold } : {})
+        ...(field === "stock" ? { sold: newSold } : {}),
       };
-      
+      updated[index] = updatedProduct;
+
+      // Sync to Supabase
+      syncProductToDb(updatedProduct);
+
       return updated;
     });
-  }, []);
+  }, [syncProductToDb]);
 
-  const handleSliderChange = useCallback((i, newStock) => {
+  const handleSliderChange = useCallback((index, newStock) => {
     setProducts((prev) => {
       const updated = [...prev];
-      const oldStock = Number(updated[i].stock) || 0;
-      const newStockNum = Number(newStock);
-      let newSold = Number(updated[i].sold) || 0;
+      const oldProduct = updated[index];
+      const oldStock = Number(oldProduct.stock) || 0;
+      let newSold = Number(oldProduct.sold) || 0;
 
-      if (newStockNum < oldStock) {
-        newSold += (oldStock - newStockNum);
+      if (newStock < oldStock) {
+        newSold += oldStock - newStock;
       }
 
-      updated[i] = { ...updated[i], stock: newStockNum, sold: newSold };
+      const updatedProduct = {
+        ...oldProduct,
+        stock: newStock,
+        sold: newSold,
+      };
+      updated[index] = updatedProduct;
+
+      syncProductToDb(updatedProduct);
       return updated;
     });
+  }, [syncProductToDb]);
+
+  const removeProduct = useCallback(async (index) => {
+    const productToRemove = products[index];
+    if (!productToRemove.id) {
+      // If it's an unsaved product, just remove locally
+      setProducts((prev) => prev.filter((_, i) => i !== index));
+      return;
+    }
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", productToRemove.id);
+    if (error) {
+      console.error("Failed to delete product:", error);
+      return;
+    }
+    setProducts((prev) => prev.filter((_, i) => i !== index));
+  }, [products]);
+
+  const addProduct = useCallback(async () => {
+    const newProduct = {
+      name: "",
+      stock: 0,
+      unit: "kg",
+      sale_price: 0,
+      cost_price: 0,
+      expiry: "",
+      sold: 0,
+    };
+    const { data, error } = await supabase
+      .from("products")
+      .insert([newProduct])
+      .select();
+    if (error) {
+      console.error("Failed to add product:", error);
+      return;
+    }
+    if (data && data.length > 0) {
+      setProducts((prev) => [...prev, data[0]]);
+    }
   }, []);
 
-  const removeProduct = useCallback((i) => {
-    setProducts((prev) => {
-      const updated = [...prev];
-      updated.splice(i, 1);
-      return updated;
-    });
-  }, []);
-
-  const addProduct = () => {
-    setProducts((prev) => [
-      ...prev,
-      {
-        name: "",
-        stock: 0,
-        unit: "kg",
-        salePrice: 0,
-        costPrice: 0,
-        expiry: "",
-        sold: 0
-      }
-    ]);
-  };
-
-  // --------------------------------------------------
+  // -----------------------
   //  SORTING LOGIC
-  // --------------------------------------------------
-  const sortedProducts = (() => {
+  // -----------------------
+  const sortedProducts = useMemo(() => {
     const withIndex = products.map((p, idx) => ({ ...p, _originalIndex: idx }));
     if (sortBy === "alpha") {
       return withIndex.sort((a, b) => a.name.localeCompare(b.name));
@@ -344,7 +496,29 @@ export default function App() {
     } else {
       return withIndex;
     }
-  })();
+  }, [products, sortBy]);
+
+  // -----------------------
+  //  USER GUIDE
+  // -----------------------
+  const openUserGuide = () => {
+    const guideWindow = window.open("", "StockSageUserGuide", "width=900,height=700,scrollbars=yes,resizable=yes");
+    if (guideWindow) {
+      guideWindow.document.write(getUserGuideHTML());
+      guideWindow.document.close();
+    }
+  };
+
+  // Load Playfair font (unchanged)
+  useEffect(() => {
+    if (!document.getElementById("playfair-font-link")) {
+      const link = document.createElement("link");
+      link.id = "playfair-font-link";
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap";
+      document.head.appendChild(link);
+    }
+  }, []);
 
   // =======================
   //  LOGIN SCREEN
@@ -356,15 +530,15 @@ export default function App() {
           <h1 className="title">Stock Sage</h1>
           <h2>Login</h2>
           <div className="inputGroup">
-            <input className="formInput" name="username" placeholder="Username" required />
+            <input className="formInput" name="username" placeholder="Email" required />
           </div>
           <div className="inputGroup passwordWrapper">
-            <input 
+            <input
               className="formInput"
-              name="password" 
-              type={showPassword ? "text" : "password"} 
-              placeholder="Password" 
-              required 
+              name="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              required
             />
             <button type="button" className="btn" onClick={() => setShowPassword(!showPassword)}>
               {showPassword ? "Hide" : "Show"}
@@ -382,9 +556,16 @@ export default function App() {
   // =======================
   //  MAIN APP (LOGGED IN)
   // =======================
+  if (isLoading) {
+    return (
+      <div className="loginContainer" style={{ color: "white" }}>
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <div className="appContainer">
-      
       {/* ---- HEADER ---- */}
       <div className="header">
         <div className="headerLeft">
@@ -396,7 +577,7 @@ export default function App() {
           </button>
         </div>
         <div className="headerRight">
-          <div className="userBadge">👤 {currentUser}</div>
+          <div className="userBadge">👤 {currentUser?.email}</div>
           <button
             onClick={() => setSortBy("alpha")}
             title="Sort alphabetically (A‑Z)"
@@ -425,56 +606,114 @@ export default function App() {
         <div className="modalOverlay" onClick={() => setShowSettings(false)}>
           <div className="modalContent" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ marginTop: 0 }}>Settings</h2>
-            
+
             <fieldset>
               <legend>Price Reduction Percentages</legend>
               <div className="inputGroup">
                 <label>5-3 days left (%): </label>
-                <input className="formInput" type="number" min="0" max="100" value={newDiscount5} onChange={(e) => setNewDiscount5(e.target.value)} />
+                <input
+                  className="formInput"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newDiscount5}
+                  onChange={(e) => setNewDiscount5(e.target.value)}
+                />
               </div>
               <div className="inputGroup">
                 <label>3-2 days left (%): </label>
-                <input className="formInput" type="number" min="0" max="100" value={newDiscount3} onChange={(e) => setNewDiscount3(e.target.value)} />
+                <input
+                  className="formInput"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newDiscount3}
+                  onChange={(e) => setNewDiscount3(e.target.value)}
+                />
               </div>
               <div className="inputGroup">
                 <label>2-1 days left (%): </label>
-                <input className="formInput" type="number" min="0" max="100" value={newDiscount2} onChange={(e) => setNewDiscount2(e.target.value)} />
+                <input
+                  className="formInput"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newDiscount2}
+                  onChange={(e) => setNewDiscount2(e.target.value)}
+                />
               </div>
-              <button onClick={saveDiscounts} className="btn btnPrimary">Save Discounts</button>
+              <button onClick={saveDiscounts} className="btn btnPrimary">
+                Save Discounts
+              </button>
             </fieldset>
 
             <fieldset>
               <legend>Change Password</legend>
               <div className="inputGroup">
                 <label>Current password: </label>
-                <input className="formInput" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                <input
+                  className="formInput"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
               </div>
               <div className="inputGroup">
                 <label>New password: </label>
-                <input className="formInput" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <input
+                  className="formInput"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
               </div>
               <div className="inputGroup">
                 <label>Confirm new password: </label>
-                <input className="formInput" type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} />
+                <input
+                  className="formInput"
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                />
               </div>
-              <button onClick={changePassword} className="btn btnPrimary">Update Password</button>
+              <button onClick={changePassword} className="btn btnPrimary">
+                Update Password
+              </button>
             </fieldset>
 
             <fieldset>
               <legend>Add New User</legend>
               <div className="inputGroup">
-                <label>New username: </label>
-                <input className="formInput" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
+                <label>Email (username): </label>
+                <input
+                  className="formInput"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="user@example.com"
+                />
               </div>
               <div className="inputGroup">
                 <label>Password: </label>
-                <input className="formInput" type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} />
+                <input
+                  className="formInput"
+                  type="password"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                />
               </div>
-              <button onClick={addUser} className="btn btnPrimary">Add User</button>
+              <button onClick={addUser} className="btn btnPrimary">
+                Add User
+              </button>
             </fieldset>
 
             {settingsMsg && <div className="settingsMessage">{settingsMsg}</div>}
-            <button onClick={() => setShowSettings(false)} className="btn" style={{ width: "100%", marginTop: "10px" }}>Close</button>
+            <button
+              onClick={() => setShowSettings(false)}
+              className="btn"
+              style={{ width: "100%", marginTop: "10px" }}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
@@ -483,7 +722,7 @@ export default function App() {
       <div className="productGrid">
         {sortedProducts.map((p) => (
           <ProductCard
-            key={p._originalIndex}
+            key={p.id || p._originalIndex}
             p={p}
             originalIndex={p._originalIndex}
             updateField={updateField}
